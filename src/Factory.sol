@@ -20,10 +20,10 @@ contract Factory {
     }
 
     function createPair(address tokenA, address tokenB) public returns (address pair) {
-        require(tokenA != tokenB, "xiang tong dai bi");
+        require(tokenA != tokenB, "same coin");
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
         require(token0 != address(0), "address(0)");
-        require(getPair[token0][token1] == address(0), "cun zai");
+        require(getPair[token0][token1] == address(0), "duplicate");
 
         // Must match Library.pairFor salt derivation to keep the pair address deterministic.
         bytes32 salt = keccak256(abi.encodePacked(token0, token1));
@@ -43,12 +43,12 @@ contract Factory {
     }
 
     function setFeeTo(address _feeTo) public {
-        require(msg.sender == feeToSetter, "jin zhi");
+        require(msg.sender == feeToSetter, "forbidden");
         feeTo = _feeTo;
     }
 
     function setFeeToSetter(address _feeToSetter) public {
-        require(msg.sender == feeToSetter, "jin zhi");
+        require(msg.sender == feeToSetter, "forbidden");
         feeToSetter = _feeToSetter;
     }
 }

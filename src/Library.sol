@@ -6,9 +6,9 @@ import "./Pair.sol";
 
 library Library {
     function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
-        require(tokenA != tokenB, "invalid tokens");
+        require(tokenA != tokenB, "identical tokens");
         (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        require(token0 != address(0), "error token0");
+        require(token0 != address(0), "token0 address(0)");
     }
 
     function pairFor(address factory, address tokenA, address tokenB) internal pure returns (address _pair) {
