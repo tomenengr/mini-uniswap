@@ -66,7 +66,7 @@ flowchart LR
 
 ## 测试覆盖
 
-当前测试主要覆盖 Factory 创建交易对、Library 报价计算、Pair 地址预测、reserve 顺序、LP mint/burn、swap、K invariant、skim 和 sync 等核心路径。
+当前测试主要覆盖 Factory 创建交易对、Library 报价计算、Pair 地址预测、reserve 顺序、LP mint/burn、swap、K invariant、skim、sync，以及 Router add/remove liquidity 和 token swap 等核心路径。
 
 | 测试文件 | 覆盖内容 |
 | --- | --- |
@@ -75,11 +75,12 @@ flowchart LR
 | `test/GetPairInitHash.t.sol` | 输出 Pair init code hash，用于校验 CREATE2 地址计算 |
 | `test/PairForAndReserves.t.sol` | 验证 `pairFor` 地址预测和 `getReserves` token 顺序 |
 | `test/Pair.t.sol` | 验证 LP Token mint/burn、swap、K invariant、reserve 更新、skim 和 sync |
+| `test/Router.t.sol` | 验证 add/remove liquidity、滑点、deadline、exact input/output swap 和多跳 swap |
 
 运行结果：
 
 ```text
-44 tests passed, 0 failed, 0 skipped
+56 tests passed, 0 failed, 0 skipped
 ```
 
 ## 快速开始
@@ -138,7 +139,8 @@ forge coverage
     ├── GetPairInitHash.t.sol
     ├── Library.t.sol
     ├── Pair.t.sol
-    └── PairForAndReserves.t.sol
+    ├── PairForAndReserves.t.sol
+    └── Router.t.sol
 ```
 
 ## 与 Uniswap V2 原版的差异
@@ -151,7 +153,7 @@ forge coverage
 
 ## 后续计划
 
-- 补充 Router 的 add/remove liquidity、swap、deadline 和滑点测试。
+- 补充 Router 的 ETH/WETH add/remove liquidity 和 swap 测试。
 - 增强 Pair 的 feeTo 协议手续费、价格累积和 flash swap 回调测试。
 - 增加 fuzz tests 和 invariant tests，重点验证 K 值约束和 reserve/balance 一致性。
 - 增加部署脚本和本地 demo 流程。
