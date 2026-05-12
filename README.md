@@ -66,7 +66,7 @@ flowchart LR
 
 ## 测试覆盖
 
-当前测试主要覆盖 Factory 创建交易对、Library 报价计算、Pair 地址预测、reserve 顺序和首次添加流动性等基础路径。
+当前测试主要覆盖 Factory 创建交易对、Library 报价计算、Pair 地址预测、reserve 顺序、LP mint/burn、swap、K invariant、skim 和 sync 等核心路径。
 
 | 测试文件 | 覆盖内容 |
 | --- | --- |
@@ -74,12 +74,12 @@ flowchart LR
 | `test/Library.t.sol` | 验证 token 排序、报价公式、输入/输出金额计算和多跳路径金额计算 |
 | `test/GetPairInitHash.t.sol` | 输出 Pair init code hash，用于校验 CREATE2 地址计算 |
 | `test/PairForAndReserves.t.sol` | 验证 `pairFor` 地址预测和 `getReserves` token 顺序 |
-| `test/Pair.t.sol` | 验证首次 mint LP Token 和流动性不足时 revert |
+| `test/Pair.t.sol` | 验证 LP Token mint/burn、swap、K invariant、reserve 更新、skim 和 sync |
 
 运行结果：
 
 ```text
-31 tests passed, 0 failed, 0 skipped
+44 tests passed, 0 failed, 0 skipped
 ```
 
 ## 快速开始
@@ -151,8 +151,8 @@ forge coverage
 
 ## 后续计划
 
-- 补充 Pair 的二次 mint、burn、swap、K invariant 和 reserve 更新测试。
 - 补充 Router 的 add/remove liquidity、swap、deadline 和滑点测试。
+- 增强 Pair 的 feeTo 协议手续费、价格累积和 flash swap 回调测试。
 - 增加 fuzz tests 和 invariant tests，重点验证 K 值约束和 reserve/balance 一致性。
 - 增加部署脚本和本地 demo 流程。
 - 编写 `docs/design.md`，整理 AMM 数学推导和核心设计取舍。

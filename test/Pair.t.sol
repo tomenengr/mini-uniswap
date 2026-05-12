@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "../src/Factory.sol";
 import "../src/Pair.sol";
 import "../src/ERC20.sol";
+import "../src/Library.sol";
 
 contract PairTest is Test {
     Factory factory;
@@ -13,6 +14,7 @@ contract PairTest is Test {
     ERC20 token1;
 
     address alice = address(0x1);
+    address bob = address(0x2);
 
     function setUp() public {
         // 1. 部署环境
@@ -29,9 +31,11 @@ contract PairTest is Test {
             (token0, token1) = (token1, token0);
         }
 
-        // 4. 给 Alice 一点钱
+        // 4. 给测试账户一些 token
         token0.transfer(alice, 1000 ether);
         token1.transfer(alice, 1000 ether);
+        token0.transfer(bob, 1000 ether);
+        token1.transfer(bob, 1000 ether);
     }
 
     function testFirstMint() public {
@@ -72,6 +76,176 @@ contract PairTest is Test {
         // 我们预期它会 revert，并抛出错误信息
         vm.expectRevert("insufficient liquidity minted");
         pair.mint(alice);
+        vm.stopPrank();
+    }
+
+    function testSecondMint() public {
+        _addLiquidity(alice, 10 ether, 10 ether);
+
+        uint256 liquidity = _addLiquidity(alice, 5 ether, 5 ether);
+
+        assertEq(liquidity, 5 ether);
+        assertEq(pair.balanceOf(alice), 15 ether - pair.MINIMUM_LIQUIDITY());
+
+        (uint112 r0, uint112 r1,) = pair.getReserves();
+        assertEq(r0, 15 ether);
+        assertEq(r1, 15 ether);
+    }
+
+    function testSecondMintUsesLowerSideWhenRatioIsUnbalanced() public {
+        _addLiquidity(alice, 10 ether, 10 ether);
+
+        uint256 liquidity = _addLiquidity(alice, 10 ether, 5 ether);
+
+        assertEq(liquidity, 5 ether);
+
+        (uint112 r0, uint112 r1,) = pair.getReserves();
+        assertEq(r0, 20 ether);
+        assertEq(r1, 15 ether);
+    }
+
+    function testBurn() public {
+        _addLiquidity(alice, 10 ether, 10 ether);
+
+        uint256 liquidity = pair.balanceOf(alice);
+        uint256 balance0Before = token0.balanceOf(alice);
+        uint256 balance1Before = token1.balanceOf(alice);
+
+        vm.startPrank(alice);
+        pair.transfer(address(pair), liquidity);
+        (uint256 amount0, uint256 amount1) = pair.burn(alice);
+        vm.stopPrank();
+
+        assertEq(amount0, 10 ether - pair.MINIMUM_LIQUIDITY());
+        assertEq(amount1, 10 ether - pair.MINIMUM_LIQUIDITY());
+        assertEq(token0.balanceOf(alice), balance0Before + amount0);
+        assertEq(token1.balanceOf(alice), balance1Before + amount1);
+        assertEq(pair.balanceOf(alice), 0);
+
+        (uint112 r0, uint112 r1,) = pair.getReserves();
+        assertEq(r0, pair.MINIMUM_LIQUIDITY());
+        assertEq(r1, pair.MINIMUM_LIQUIDITY());
+    }
+
+    function testRevertWhenBurnWithoutLiquidity() public {
+        _addLiquidity(alice, 10 ether, 10 ether);
+
+        vm.expectRevert("insufficient liquidity burned");
+        pair.burn(alice);
+    }
+
+    function testSwapExactToken0ForToken1() public {
+        _addLiquidity(alice, 10 ether, 10 ether);
+
+        uint256 amount0In = 1 ether;
+        uint256 amount1Out = Library.getAmountOut(amount0In, 10 ether, 10 ether);
+
+        vm.startPrank(bob);
+        token0.transfer(address(pair), amount0In);
+        pair.swap(0, amount1Out, bob, "");
+        vm.stopPrank();
+
+        assertEq(token1.balanceOf(bob), 1000 ether + amount1Out);
+
+        (uint112 r0, uint112 r1,) = pair.getReserves();
+        assertEq(r0, 10 ether + amount0In);
+        assertEq(r1, 10 ether - amount1Out);
+        assertEq(token0.balanceOf(address(pair)), r0);
+        assertEq(token1.balanceOf(address(pair)), r1);
+    }
+
+    function testSwapExactToken1ForToken0() public {
+        _addLiquidity(alice, 10 ether, 10 ether);
+
+        uint256 amount1In = 1 ether;
+        uint256 amount0Out = Library.getAmountOut(amount1In, 10 ether, 10 ether);
+
+        vm.startPrank(bob);
+        token1.transfer(address(pair), amount1In);
+        pair.swap(amount0Out, 0, bob, "");
+        vm.stopPrank();
+
+        assertEq(token0.balanceOf(bob), 1000 ether + amount0Out);
+
+        (uint112 r0, uint112 r1,) = pair.getReserves();
+        assertEq(r0, 10 ether - amount0Out);
+        assertEq(r1, 10 ether + amount1In);
+    }
+
+    function testRevertWhenSwapHasNoOutput() public {
+        _addLiquidity(alice, 10 ether, 10 ether);
+
+        vm.expectRevert("insufficient output amount");
+        pair.swap(0, 0, bob, "");
+    }
+
+    function testRevertWhenSwapOutputExceedsLiquidity() public {
+        _addLiquidity(alice, 10 ether, 10 ether);
+
+        vm.expectRevert("insufficient liquidity");
+        pair.swap(0, 10 ether, bob, "");
+    }
+
+    function testRevertWhenSwapToTokenAddress() public {
+        _addLiquidity(alice, 10 ether, 10 ether);
+
+        vm.expectRevert("invalid to");
+        pair.swap(0, 1 ether, address(token0), "");
+    }
+
+    function testRevertWhenSwapHasNoInput() public {
+        _addLiquidity(alice, 10 ether, 10 ether);
+
+        vm.expectRevert("insufficient input amount");
+        pair.swap(0, 1 ether, bob, "");
+    }
+
+    function testRevertWhenSwapBreaksKInvariant() public {
+        _addLiquidity(alice, 10 ether, 10 ether);
+
+        vm.startPrank(bob);
+        token0.transfer(address(pair), 1 ether);
+        vm.expectRevert(bytes("K"));
+        pair.swap(0, 2 ether, bob, "");
+        vm.stopPrank();
+    }
+
+    function testSkimTransfersExcessBalances() public {
+        _addLiquidity(alice, 10 ether, 10 ether);
+
+        vm.startPrank(bob);
+        token0.transfer(address(pair), 1 ether);
+        token1.transfer(address(pair), 2 ether);
+        pair.skim(bob);
+        vm.stopPrank();
+
+        assertEq(token0.balanceOf(bob), 1000 ether);
+        assertEq(token1.balanceOf(bob), 1000 ether);
+
+        (uint112 r0, uint112 r1,) = pair.getReserves();
+        assertEq(r0, 10 ether);
+        assertEq(r1, 10 ether);
+    }
+
+    function testSyncUpdatesReservesToCurrentBalances() public {
+        _addLiquidity(alice, 10 ether, 10 ether);
+
+        vm.startPrank(bob);
+        token0.transfer(address(pair), 1 ether);
+        token1.transfer(address(pair), 2 ether);
+        pair.sync();
+        vm.stopPrank();
+
+        (uint112 r0, uint112 r1,) = pair.getReserves();
+        assertEq(r0, 11 ether);
+        assertEq(r1, 12 ether);
+    }
+
+    function _addLiquidity(address provider, uint256 amount0, uint256 amount1) internal returns (uint256 liquidity) {
+        vm.startPrank(provider);
+        token0.transfer(address(pair), amount0);
+        token1.transfer(address(pair), amount1);
+        liquidity = pair.mint(provider);
         vm.stopPrank();
     }
 }
