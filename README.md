@@ -115,6 +115,20 @@ forge fmt
 forge coverage
 ```
 
+也可以使用 Makefile：
+
+```bash
+make build
+make test
+make fmt-check
+make coverage
+```
+
+## 文档
+
+- [`docs/design.md`](docs/design.md)：核心架构、AMM 数学、LP mint/burn、swap invariant 和 Router 流程。
+- [`docs/audit-notes.md`](docs/audit-notes.md)：已知限制、安全检查、未覆盖风险和后续审查计划。
+
 ## 目录结构
 
 ```text
@@ -157,5 +171,3 @@ forge coverage
 - 增强 Pair 的 feeTo 协议手续费、价格累积和 flash swap 回调测试。
 - 增加 fuzz tests 和 invariant tests，重点验证 K 值约束和 reserve/balance 一致性。
 - 增加部署脚本和本地 demo 流程。
-- 编写 `docs/design.md`，整理 AMM 数学推导和核心设计取舍。
-- 编写 `docs/audit-notes.md`，记录已知风险和安全限制。
