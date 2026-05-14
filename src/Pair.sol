@@ -22,7 +22,7 @@ contract Pair is UniERC20 {
     uint256 public price0CumulativeLast;
     uint256 public price1CumulativeLast;
 
-    uint256 kLast;
+    uint256 public kLast;
 
     uint256 private unlock = 1;
 
@@ -73,8 +73,8 @@ contract Pair is UniERC20 {
         if (timeElapsed > 0 && reserve0 != 0 && reserve1 != 0) {
             // 使用 UQ112x112 精度计算累积价格
             unchecked {
-                price0CumulativeLast += uint256(reserve1 << 112) / reserve0 * timeElapsed;
-                price1CumulativeLast += uint256(reserve0 << 112) / reserve1 * timeElapsed;
+                price0CumulativeLast += (uint256(reserve1) << 112) / reserve0 * timeElapsed;
+                price1CumulativeLast += (uint256(reserve0) << 112) / reserve1 * timeElapsed;
             }
         }
 

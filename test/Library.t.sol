@@ -79,6 +79,16 @@ contract LibraryTest is Test {
         assertEq(amountOut, 200 ether);
     }
 
+    function testFuzzQuoteMatchesFormula(uint256 amountIn, uint256 reserveIn, uint256 reserveOut) public view {
+        amountIn = bound(amountIn, 1, 1e30);
+        reserveIn = bound(reserveIn, 1, 1e30);
+        reserveOut = bound(reserveOut, 1, 1e30);
+
+        uint256 amountOut = harness.quote(amountIn, reserveIn, reserveOut);
+
+        assertEq(amountOut, amountIn * reserveOut / reserveIn);
+    }
+
     function testRevertWhenQuoteAmountIsZero() public {
         vm.expectRevert("invalid input");
         harness.quote(0, 1_000 ether, 2_000 ether);
@@ -100,6 +110,18 @@ contract LibraryTest is Test {
         assertEq(amountOut, expected);
     }
 
+    function testFuzzGetAmountOutMatchesFormula(uint256 amountIn, uint256 reserveIn, uint256 reserveOut) public view {
+        amountIn = bound(amountIn, 1, 1e30);
+        reserveIn = bound(reserveIn, 1, 1e30);
+        reserveOut = bound(reserveOut, 1, 1e30);
+
+        uint256 amountOut = harness.getAmountOut(amountIn, reserveIn, reserveOut);
+        uint256 expected = amountIn * 997 * reserveOut / (reserveIn * 1000 + amountIn * 997);
+
+        assertEq(amountOut, expected);
+        assertLt(amountOut, reserveOut);
+    }
+
     function testRevertWhenGetAmountOutAmountIsZero() public {
         vm.expectRevert("invalid input");
         harness.getAmountOut(0, 1_000 ether, 1_000 ether);
@@ -119,6 +141,20 @@ contract LibraryTest is Test {
         uint256 denominactor = (1000 ether - 100 ether) * 997;
         uint256 expected = numerator / denominactor + 1;
         assertEq(amountIn, expected);
+    }
+
+    function testFuzzGetAmountInProducesEnoughOutput(uint256 amountOut, uint256 reserveIn, uint256 reserveOut)
+        public
+        view
+    {
+        reserveIn = bound(reserveIn, 1, 1e22);
+        reserveOut = bound(reserveOut, 2, 1e22);
+        amountOut = bound(amountOut, 1, reserveOut - 1);
+
+        uint256 amountIn = harness.getAmountIn(amountOut, reserveIn, reserveOut);
+        uint256 actualOut = harness.getAmountOut(amountIn, reserveIn, reserveOut);
+
+        assertGe(actualOut, amountOut);
     }
 
     function testRevertWhenGetAmountInAmountIsZero() public {
