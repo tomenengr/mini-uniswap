@@ -6,6 +6,7 @@ import "../src/Factory.sol";
 import "../src/Pair.sol";
 import "../src/ERC20.sol";
 import "../src/Library.sol";
+import "../src/Math.sol";
 import "./Mocks.t.sol";
 
 contract PairTest is Test {
@@ -303,6 +304,26 @@ contract PairTest is Test {
         assertGt(pair.kLast(), kLastAfterMint);
         (uint112 r0, uint112 r1,) = pair.getReserves();
         assertEq(pair.kLast(), uint256(r0) * r1);
+    }
+
+    function testFeeOnMintsExactProtocolLiquidity() public {
+        address feeTo = address(0xFEE);
+        factory.setFeeTo(feeTo);
+
+        _addLiquidity(alice, 10 ether, 10 ether);
+        uint256 kLastBefore = pair.kLast();
+
+        _swapToken0ForToken1(bob, 1 ether);
+        (uint112 reserve0BeforeMintFee, uint112 reserve1BeforeMintFee,) = pair.getReserves();
+        uint256 totalSupplyBeforeMintFee = pair.totalSupply();
+        uint256 rootK = Math.sqrt(uint256(reserve0BeforeMintFee) * reserve1BeforeMintFee);
+        uint256 rootKLast = Math.sqrt(kLastBefore);
+        uint256 expectedProtocolLiquidity = totalSupplyBeforeMintFee * (rootK - rootKLast) / (5 * rootK + rootKLast);
+
+        _addLiquidity(alice, 1 ether, 1 ether);
+
+        assertGt(expectedProtocolLiquidity, 0);
+        assertEq(pair.balanceOf(feeTo), expectedProtocolLiquidity);
     }
 
     function testFeeOffClearsKLastAfterBeingEnabled() public {

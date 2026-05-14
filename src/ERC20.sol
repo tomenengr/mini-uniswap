@@ -5,8 +5,8 @@ contract ERC20 {
     uint256 public totalSupply;
     string public name;
     string public symbol;
-    address public owner;
-    uint256 public decimals = 18;
+    address public immutable owner;
+    uint256 public constant decimals = 18;
 
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;

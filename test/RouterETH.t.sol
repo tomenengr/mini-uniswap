@@ -62,6 +62,26 @@ contract RouterETHTest is Test {
         assertEq(alice.balance, balanceBefore - 5 ether);
     }
 
+    function testRevertWhenAddLiquidityETHBelowTokenMinimum() public {
+        _addLiquidityETH(alice, 10 ether, 5 ether);
+
+        vm.startPrank(alice);
+        token.approve(address(router), 100 ether);
+        vm.expectRevert("UniswapV2Router: INSUFFICIENT_A_AMOUNT");
+        router.addLiquidityETH{value: 1 ether}(address(token), 100 ether, 3 ether, 0, alice, block.timestamp);
+        vm.stopPrank();
+    }
+
+    function testRevertWhenAddLiquidityETHBelowETHMinimum() public {
+        _addLiquidityETH(alice, 10 ether, 5 ether);
+
+        vm.startPrank(alice);
+        token.approve(address(router), 10 ether);
+        vm.expectRevert("UniswapV2Router: INSUFFICIENT_B_AMOUNT");
+        router.addLiquidityETH{value: 10 ether}(address(token), 10 ether, 0, 6 ether, alice, block.timestamp);
+        vm.stopPrank();
+    }
+
     function testRemoveLiquidityETHUnwrapsWETHToETH() public {
         (,, uint256 liquidity) = _addLiquidityETH(alice, 10 ether, 5 ether);
         Pair pair = Pair(factory.getPair(address(token), address(weth)));
@@ -83,6 +103,28 @@ contract RouterETHTest is Test {
         assertEq(token.balanceOf(alice), tokenBefore + amountToken);
         assertEq(alice.balance, ethBefore + amountETH);
         assertEq(pair.balanceOf(alice), 0);
+    }
+
+    function testRevertWhenRemoveLiquidityETHBelowTokenMinimum() public {
+        (,, uint256 liquidity) = _addLiquidityETH(alice, 10 ether, 5 ether);
+        Pair pair = Pair(factory.getPair(address(token), address(weth)));
+
+        vm.startPrank(alice);
+        pair.approve(address(router), liquidity);
+        vm.expectRevert("UniswapV2Router: INSUFFICIENT_TOKEN_AMOUNT");
+        router.removeLiquidityETH(address(token), liquidity, 10 ether, 0, alice, block.timestamp);
+        vm.stopPrank();
+    }
+
+    function testRevertWhenRemoveLiquidityETHBelowETHMinimum() public {
+        (,, uint256 liquidity) = _addLiquidityETH(alice, 10 ether, 5 ether);
+        Pair pair = Pair(factory.getPair(address(token), address(weth)));
+
+        vm.startPrank(alice);
+        pair.approve(address(router), liquidity);
+        vm.expectRevert("UniswapV2Router: INSUFFICIENT_ETH_AMOUNT");
+        router.removeLiquidityETH(address(token), liquidity, 0, 5 ether, alice, block.timestamp);
+        vm.stopPrank();
     }
 
     function testRouterReceiveOnlyAcceptsWETH() public {

@@ -202,6 +202,75 @@ contract RouterTest is Test {
         assertEq(tokenC.balanceOf(bob), 1000 ether + expectedC);
     }
 
+    function testFuzzSwapExactTokensForTokensSingleHop(uint256 amountIn) public {
+        _addLiquidity(alice, tokenA, tokenB, 100 ether, 100 ether);
+        amountIn = bound(amountIn, 1e9, 10 ether);
+
+        uint256[] memory expectedAmounts = Library.getAmountsOut(address(factory), amountIn, _path(tokenA, tokenB));
+        uint256 bobBalanceBefore = tokenB.balanceOf(bob);
+
+        vm.startPrank(bob);
+        tokenA.approve(address(router), amountIn);
+        uint256[] memory amounts =
+            router.swapExactTokensForTokens(amountIn, expectedAmounts[1], _path(tokenA, tokenB), bob, block.timestamp);
+        vm.stopPrank();
+
+        assertEq(amounts[0], expectedAmounts[0]);
+        assertEq(amounts[1], expectedAmounts[1]);
+        assertEq(tokenB.balanceOf(bob), bobBalanceBefore + expectedAmounts[1]);
+        _assertPairReserves(
+            Pair(factory.getPair(address(tokenA), address(tokenB))),
+            address(tokenA),
+            100 ether + amountIn,
+            address(tokenB),
+            100 ether - expectedAmounts[1]
+        );
+    }
+
+    function testFuzzSwapExactTokensForTokensMultiHop(uint256 amountIn) public {
+        _addLiquidity(alice, tokenA, tokenB, 100 ether, 200 ether);
+        _addLiquidity(alice, tokenB, tokenC, 200 ether, 100 ether);
+        amountIn = bound(amountIn, 1e9, 10 ether);
+
+        address[] memory path = _path(tokenA, tokenB, tokenC);
+        uint256[] memory expectedAmounts = Library.getAmountsOut(address(factory), amountIn, path);
+        uint256 bobBalanceBefore = tokenC.balanceOf(bob);
+
+        vm.startPrank(bob);
+        tokenA.approve(address(router), amountIn);
+        uint256[] memory amounts =
+            router.swapExactTokensForTokens(amountIn, expectedAmounts[2], path, bob, block.timestamp);
+        vm.stopPrank();
+
+        assertEq(amounts[0], expectedAmounts[0]);
+        assertEq(amounts[1], expectedAmounts[1]);
+        assertEq(amounts[2], expectedAmounts[2]);
+        assertEq(tokenC.balanceOf(bob), bobBalanceBefore + expectedAmounts[2]);
+    }
+
+    function testFuzzSwapTokensForExactTokensMultiHop(uint256 amountOut) public {
+        _addLiquidity(alice, tokenA, tokenB, 100 ether, 200 ether);
+        _addLiquidity(alice, tokenB, tokenC, 200 ether, 100 ether);
+        amountOut = bound(amountOut, 1, 10 ether);
+
+        address[] memory path = _path(tokenA, tokenB, tokenC);
+        uint256[] memory expectedAmounts = Library.getAmountsIn(address(factory), amountOut, path);
+        uint256 bobTokenABefore = tokenA.balanceOf(bob);
+        uint256 bobTokenCBefore = tokenC.balanceOf(bob);
+
+        vm.startPrank(bob);
+        tokenA.approve(address(router), expectedAmounts[0]);
+        uint256[] memory amounts =
+            router.swapTokensForExactTokens(amountOut, expectedAmounts[0], path, bob, block.timestamp);
+        vm.stopPrank();
+
+        assertEq(amounts[0], expectedAmounts[0]);
+        assertEq(amounts[1], expectedAmounts[1]);
+        assertEq(amounts[2], expectedAmounts[2]);
+        assertEq(tokenA.balanceOf(bob), bobTokenABefore - expectedAmounts[0]);
+        assertEq(tokenC.balanceOf(bob), bobTokenCBefore + amountOut);
+    }
+
     function testRevertWhenSwapExpired() public {
         _addLiquidity(alice, tokenA, tokenB, 10 ether, 10 ether);
         vm.warp(100);

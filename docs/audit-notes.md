@@ -64,15 +64,17 @@ Pair 和 Router 默认 token 遵守标准 ERC20 行为。目前不支持：
 - ETH 路径下的滑点失败用例。
 - WETH `withdraw` 失败或接收方拒收 ETH 的边界行为。
 
-### Oracle / TWAP 已补基础测试，但尚未生产完整
+### Oracle / TWAP 已补 demo，但尚未生产完整
 
 `Pair.sol` 包含 `price0CumulativeLast` 和 `price1CumulativeLast`。当前已经覆盖基础累计价格测试，包括时间推进后的累计价格增长，以及 reserve 变化时先按旧 reserve 累计上一段时间。
 
+项目还新增了 `SimpleTwapOracle.sol`，用于演示如何记录累计价格、按固定窗口更新平均价格，并通过 `consult` 查询 TWAP 报价。
+
 缺失内容包括：
 
-- 面向调用方的 TWAP library。
 - 抗操纵窗口设计。
 - 更复杂交易序列下的 TWAP 行为验证。
+- 生产级异常价格处理和更新权限设计。
 
 ### Flash Swap 已有基础测试，但还不是完整攻击面覆盖
 
@@ -98,12 +100,12 @@ Pair 和 Router 默认 token 遵守标准 ERC20 行为。目前不支持：
 
 - fee off 时不铸造协议 LP。
 - fee on 后，swap 增大 K，再 add liquidity 会给 `feeTo` 铸造 LP。
+- fee on 后按 `_mintFee` 公式精确断言协议 LP 铸造数量。
 - feeTo 关闭后，`kLast` 清零。
 - `kLast` 对外可读，用于验证 fee 状态。
 
 后续可继续补充：
 
-- 协议 LP 铸造数量的精确公式断言。
 - 多次 swap 后再 mint/burn 的 fee 累积行为。
 - fee on / off 多次切换的边界场景。
 
@@ -181,6 +183,42 @@ token1.balanceOf(address(pair)) == reserve1
 - `getAmountOut` 输出匹配 0.3% fee 公式，且输出小于 reserveOut。
 - `getAmountIn` 计算出的输入量可以换出不少于目标输出量。
 
+### Router path fuzz
+
+`Router.t.sol` 已对路径 swap 增加 fuzz 测试：
+
+- single-hop exact input。
+- multi-hop exact input。
+- multi-hop exact output。
+
+测试中对 exact-input 的最小输入做了约束，避免输出被整数除法舍入为 0 后触发 Pair 的 `insufficient output amount`。
+
+### Slither 静态分析
+
+已使用 Slither 对 `src` 合约进行静态分析，结果整理在 [`slither-report.md`](slither-report.md)。
+
+初次分析为 77 条结果。处理安全转账、零地址检查和部分 `constant` / `immutable` 后，复跑结果为：
+
+```text
+13 contracts analyzed, 61 result(s) found
+```
+
+剩余主要 findings：
+
+- `reentrancy-no-eth` / `reentrancy-benign` / `reentrancy-events`
+- `weak-prng`
+- `divide-before-multiply`
+- `missing-zero-check`
+- `calls-loop`
+- `timestamp`
+- `assembly`
+- `solc-version`
+- `low-level-calls`
+- `naming-convention`
+- `constable-states`
+
+当前已处理 Pair 内部 unchecked transfer、Router 部分 unchecked transfer、Router/Factory 关键零地址检查、部分 `constant` / `immutable` 优化。剩余 findings 多数属于设计预期或风格/教学实现限制。
+
 ### Router deadline 检查
 
 Router 用户入口使用：
@@ -206,9 +244,8 @@ Router 会检查：
 
 ## 后续建议
 
-1. 补 Router path 的 fuzz test。
-2. 补面向调用方的 TWAP library 或 TWAP demo。
-3. 继续细化 protocol fee 的精确数量断言。
-4. 给 Router ETH 路径补更多失败分支。
-5. 统一 revert message 与命名风格。
-6. 在测试和文档稳定后，再添加部署脚本或演示脚本。
+1. 继续评估 Slither 剩余 findings，优先处理真实安全收益高的项。
+2. 给 Router ETH 路径补更多边界 fuzz。
+3. 统一 revert message 与命名风格。
+4. 固定 Solidity pragma 或升级 compiler patch 版本。
+5. 在测试和文档稳定后，补更完整的本地 demo 操作流程。

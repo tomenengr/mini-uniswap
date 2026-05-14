@@ -12,6 +12,7 @@ contract Factory {
     event PairCreated(address indexed token0, address indexed token1, address pair, uint256);
 
     constructor(address _feeToSetter) {
+        require(_feeToSetter != address(0), "zero address");
         feeToSetter = _feeToSetter;
     }
 
@@ -49,6 +50,7 @@ contract Factory {
 
     function setFeeToSetter(address _feeToSetter) public {
         require(msg.sender == feeToSetter, "forbidden");
+        require(_feeToSetter != address(0), "zero address");
         feeToSetter = _feeToSetter;
     }
 }

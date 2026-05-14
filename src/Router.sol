@@ -9,10 +9,11 @@ import "./TransferHelper.sol";
 import "./interfaces/IWETH.sol";
 
 contract Router {
-    address public factory;
-    address public WETH;
+    address public immutable factory;
+    address public immutable WETH;
 
     constructor(address _factory, address _WETH) {
+        require(_factory != address(0) && _WETH != address(0), "zero address");
         factory = _factory;
         WETH = _WETH;
     }
@@ -131,7 +132,7 @@ contract Router {
 
         // 给 Pair 合约发送 ETH，Pair 合约会自动把它包成 WETH
         IWETH(WETH).deposit{value: amountETH}();
-        IWETH(WETH).transfer(pair, amountETH);
+        require(IWETH(WETH).transfer(pair, amountETH), "WETH_TRANSFER_FAILED");
 
         // Step 4: 发货。调用 Pair 合约的 mint 函数，给 to 地址发放 LP Token
         liquidity = IUniswapV2Pair(pair).mint(to);
@@ -150,7 +151,7 @@ contract Router {
         address pair = Library.pairFor(factory, tokenA, tokenB);
 
         // Step 2: 收凭证。把用户的 LP Token 转入 Pair 合约本身，准备销毁
-        IUniswapV2Pair(pair).transferFrom(msg.sender, pair, liquidity);
+        require(IUniswapV2Pair(pair).transferFrom(msg.sender, pair, liquidity), "TRANSFER_FROM_FAILED");
 
         // Step 3: 触发销毁。拿到绝对物理顺序的 0 和 1
         (uint256 amount0, uint256 amount1) = IUniswapV2Pair(pair).burn(to);

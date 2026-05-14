@@ -450,6 +450,54 @@ amountOut = bound(amountOut, 1, reserveOut - 1);
 - 对 AMM 数学测试，需要避免测试代码自身因为极端输入溢出。
 - `bound` 的作用是把随机输入映射到有意义的测试区间。
 
+## 7. Router exact-input fuzz 中 1 wei 输入导致输出为 0
+
+### 现象
+
+补 Router path fuzz 时，Foundry 生成 `amountIn = 1`，`Library.getAmountsOut` 算出的输出为 0。Router 继续执行 swap，最终 Pair 因为输出为 0 revert：
+
+```text
+insufficient output amount
+```
+
+### 复现测试
+
+测试文件：[test/Router.t.sol](../test/Router.t.sol)
+
+相关测试：
+
+```solidity
+function testFuzzSwapExactTokensForTokensSingleHop(uint256 amountIn) public {
+    _addLiquidity(alice, tokenA, tokenB, 100 ether, 100 ether);
+    amountIn = bound(amountIn, 1e9, 10 ether);
+    ...
+}
+```
+
+### 错误原因
+
+AMM 使用整数除法。极小输入在手续费和除法舍入后，可能得到 0 输出：
+
+```text
+amountOut = amountInWithFee * reserveOut / (reserveIn * 1000 + amountInWithFee)
+```
+
+当 `amountOut == 0` 时，Pair 的 `swap(0, 0, ...)` 会正确 revert。
+
+### 修复方式
+
+将 fuzz 输入范围调整到能产生非零输出的有效区间：
+
+```solidity
+amountIn = bound(amountIn, 1e9, 10 ether);
+```
+
+### 讲解要点
+
+- 这是测试输入域问题，不是 Router 路径逻辑错误。
+- fuzz 测试要覆盖有效输入域，也要理解协议对无效输入的自然 revert。
+- 如果想专门覆盖极小输入，可以另写 revert 测试，而不是放在成功路径 fuzz 中。
+
 ## 当前回归命令
 
 每次修复后至少运行：
@@ -462,7 +510,7 @@ forge test
 当前结果：
 
 ```text
-76 tests passed, 0 failed, 0 skipped
+88 tests passed, 0 failed, 0 skipped
 ```
 
 如果只想复现某类问题，可以运行：

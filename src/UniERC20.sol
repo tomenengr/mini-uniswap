@@ -3,13 +3,13 @@ pragma solidity ^0.8.20;
 
 contract UniERC20 {
     uint256 public totalSupply = 0;
-    string public name = "Uniswap";
-    string public symbol = "UNI-LP";
+    string public constant name = "Uniswap";
+    string public constant symbol = "UNI-LP";
     address public owner;
-    uint256 public decimals = 18;
+    uint256 public constant decimals = 18;
 
     // 1. 域名分隔符：防止别人把你在测试网签的名，拿到主网去重放攻击
-    bytes32 public DOMAIN_SEPARATOR;
+    bytes32 public immutable DOMAIN_SEPARATOR;
 
     // 2. 签名的结构类型哈希（EIP-712 规定的格式）
     // 对应结构：Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)

@@ -1,6 +1,6 @@
 # Mini Uniswap V2
 
-Mini Uniswap V2 是一个使用 Solidity + Foundry 实现的简化版 Uniswap V2 AMM 项目，用来学习和验证 Factory、Pair、Router、LP Token、CREATE2 确定性地址、恒定乘积 swap、流动性管理、ETH/WETH 路径、flash swap 和 protocol fee 等核心机制。
+Mini Uniswap V2 是一个使用 Solidity + Foundry 实现的简化版 Uniswap V2 AMM 项目，用来学习和验证 Factory、Pair、Router、LP Token、CREATE2 确定性地址、恒定乘积 swap、流动性管理、ETH/WETH 路径、flash swap、protocol fee 和 TWAP oracle 等核心机制。
 
 本项目用于学习和作品集展示，不适合直接用于生产环境或真实资金。
 
@@ -11,6 +11,7 @@ Mini Uniswap V2 是一个使用 Solidity + Foundry 实现的简化版 Uniswap V2
 - 实现 LP Token 的 mint/burn、`MINIMUM_LIQUIDITY`、reserve 同步和 K 值校验。
 - 使用 CREATE2 创建交易对，使 Pair 地址可以离线预测。
 - 实现 Router 层的滑点保护、deadline 检查、多跳 swap 和 ETH/WETH 加减流动性。
+- 实现一个简化 TWAP oracle 示例，演示如何使用 Pair 累计价格计算平均价格。
 - 使用 Foundry 编写单元测试、集成测试和 invariant 测试，验证 AMM 关键安全性质。
 
 ## 核心模块
@@ -21,6 +22,7 @@ Mini Uniswap V2 是一个使用 Solidity + Foundry 实现的简化版 Uniswap V2
 | Pair | `src/Pair.sol` | 管理流动性、swap、reserve、LP Token、flash swap 和 protocol fee |
 | Router | `src/Router.sol` | 面向用户的入口，封装 add/remove liquidity、ETH/WETH 和 swap |
 | Library | `src/Library.sol` | 提供 token 排序、Pair 地址预测、reserve 查询和兑换数量计算 |
+| Oracle | `src/SimpleTwapOracle.sol` | 简化 TWAP 示例，基于 Pair 累计价格计算平均价格 |
 | ERC20 | `src/ERC20.sol`、`src/UniERC20.sol` | 测试 Token 和 LP Token 基础实现，LP Token 包含 `permit` |
 | Interfaces | `src/interfaces/` | Factory、Pair、WETH、Callee 等接口定义 |
 
@@ -77,9 +79,16 @@ flowchart LR
 - `getAmountIn`。
 - 多跳路径金额计算。
 
+### SimpleTwapOracle
+
+- 记录 Pair 的 `price0CumulativeLast` / `price1CumulativeLast`。
+- 按固定 `period` 更新平均价格。
+- 支持 `consult(tokenIn, amountIn)` 查询 TWAP 报价。
+- 演示 V2 风格累计价格如何被外部 oracle 消费。
+
 ## 测试覆盖
 
-当前测试覆盖 Factory 创建交易对、Library 报价计算、Pair 地址预测、reserve 顺序、LP mint/burn、swap、K invariant、skim/sync、Router 加减流动性、token swap、多跳 swap、ETH/WETH 路径、protocol fee、flash swap、LP permit、TWAP 价格累计、Library fuzz，以及 Foundry invariant 测试。
+当前测试覆盖 Factory 创建交易对、Library 报价计算、Pair 地址预测、reserve 顺序、LP mint/burn、swap、K invariant、skim/sync、Router 加减流动性、token swap、多跳 swap、ETH/WETH 路径、protocol fee 精确数量、flash swap、LP permit、TWAP 价格累计、TWAP oracle、Library fuzz、Router path fuzz，以及 Foundry invariant 测试。
 
 | 测试文件 | 覆盖内容 |
 | --- | --- |
@@ -87,16 +96,17 @@ flowchart LR
 | `test/Library.t.sol` | token 排序、报价公式、输入/输出金额计算、多跳路径金额计算、swap 数学 fuzz |
 | `test/GetPairInitHash.t.sol` | 输出 Pair init code hash，用于校验 CREATE2 地址计算 |
 | `test/PairForAndReserves.t.sol` | `pairFor` 地址预测和 `getReserves` token 顺序 |
-| `test/Pair.t.sol` | LP mint/burn、swap、K revert、reserve 更新、skim/sync、protocol fee、flash swap、permit、TWAP 累计价格 |
-| `test/Router.t.sol` | add/remove liquidity、滑点、deadline、exact input/output swap、多跳 swap |
+| `test/Pair.t.sol` | LP mint/burn、swap、K revert、reserve 更新、skim/sync、protocol fee 精确数量、flash swap、permit、TWAP 累计价格 |
+| `test/Router.t.sol` | add/remove liquidity、滑点、deadline、exact input/output swap、多跳 swap、Router path fuzz |
 | `test/RouterETH.t.sol` | `addLiquidityETH`、ETH refund、`removeLiquidityETH`、Router receive 限制 |
+| `test/SimpleTwapOracle.t.sol` | TWAP oracle 更新、报价、未更新前查询、period 限制和非法 token |
 | `test/PairInvariant.t.sol` | reserve/balance 一致性、只 swap 场景下 K 不下降 |
 | `test/Mocks.t.sol` | `MockWETH` 和 flash swap callback 测试辅助合约 |
 
 当前运行结果：
 
 ```text
-76 tests passed, 0 failed, 0 skipped
+88 tests passed, 0 failed, 0 skipped
 ```
 
 Invariant 测试默认运行结果示例：
@@ -164,6 +174,32 @@ make coverage
 - [`docs/design.md`](docs/design.md)：核心架构、AMM 数学、LP mint/burn、swap invariant、protocol fee、Router 流程和测试策略。
 - [`docs/audit-notes.md`](docs/audit-notes.md)：已知限制、安全检查、已完成测试覆盖和后续审查计划。
 - [`docs/debugging-archive.md`](docs/debugging-archive.md)：开发排错归档，记录可复现的错误、失败测试、原因分析和修复代码。
+- [`docs/slither-report.md`](docs/slither-report.md)：Slither 静态分析记录，包含 finding 分类、风险解释和后续处理计划。
+
+## 本地部署 Demo
+
+项目提供 Foundry script 示例：
+
+```bash
+forge script script/DeployDemo.s.sol:DeployDemo --rpc-url <RPC_URL> --private-key <PRIVATE_KEY> --broadcast
+```
+
+脚本会部署：
+
+- `Factory`
+- demo `WETH`
+- `Router`
+- 两个 demo ERC20 token
+- 一个 token pair
+- `SimpleTwapOracle`
+
+本地 anvil 演示时，可以先启动：
+
+```bash
+anvil
+```
+
+然后使用 anvil 输出的测试私钥运行 `forge script`。
 
 ## 目录结构
 
@@ -175,10 +211,13 @@ make coverage
 ├── docs
 │   ├── audit-notes.md
 │   ├── debugging-archive.md
-│   └── design.md
+│   ├── design.md
+│   └── slither-report.md
 ├── foundry.toml
 ├── Makefile
 ├── README.md
+├── script
+│   └── DeployDemo.s.sol
 ├── src
 │   ├── interfaces
 │   │   ├── IUniswapV2Callee.sol
@@ -191,6 +230,7 @@ make coverage
 │   ├── Math.sol
 │   ├── Pair.sol
 │   ├── Router.sol
+│   ├── SimpleTwapOracle.sol
 │   ├── TransferHelper.sol
 │   └── UniERC20.sol
 └── test
@@ -202,13 +242,14 @@ make coverage
     ├── PairForAndReserves.t.sol
     ├── PairInvariant.t.sol
     ├── Router.t.sol
-    └── RouterETH.t.sol
+    ├── RouterETH.t.sol
+    └── SimpleTwapOracle.t.sol
 ```
 
 ## 与 Uniswap V2 原版的差异
 
 - 这是简化实现，重点保留核心 AMM、Pair、Router、CREATE2、flash swap 和 protocol fee 机制。
-- 没有完整生产级 Oracle / TWAP 使用方案，目前覆盖了价格累计字段和基础累计价格测试。
+- 没有完整生产级 Oracle / TWAP 使用方案，目前提供简化 `SimpleTwapOracle` demo 和基础测试。
 - 没有支持 fee-on-transfer、rebasing、blacklist 等非标准 token。
 - LP Token 已包含 `permit` 实现，并覆盖有效签名、过期签名、错误 signer 和 nonce replay 测试。
 - 没有部署脚本和生产治理设计。
@@ -216,8 +257,6 @@ make coverage
 
 ## 后续计划
 
-- 补 Router path 的 fuzz test。
-- 补面向调用方的 TWAP library 或 TWAP demo。
-- 继续细化 protocol fee 的精确数量断言。
-- 给 Router ETH 路径补更多失败分支。
-- 增加部署脚本和本地 demo 流程。
+- 继续根据 Slither 记录处理剩余 findings，例如重入模式告警、pragma 固定、命名风格等。
+- 给 Router ETH 路径补更多边界 fuzz。
+- 补更完整的本地 demo 操作流程和截图/日志记录。

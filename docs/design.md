@@ -14,6 +14,7 @@ Mini Uniswap V2 是一个使用 Solidity + Foundry 实现的简化版 Uniswap V2
 | Pair | `Pair.sol` | 持有资金池资产，维护 reserves，铸造/销毁 LP，执行 swap |
 | Router | `Router.sol` | 面向用户的入口，封装加减流动性和 swap 流程 |
 | Library | `Library.sol` | 提供排序、Pair 地址预测、reserve 查询和价格计算辅助函数 |
+| Oracle | `SimpleTwapOracle.sol` | 示例 TWAP oracle，消费 Pair 累计价格并计算平均价格 |
 
 典型调用路径：
 
@@ -170,6 +171,17 @@ Router 提供更适合用户使用的接口：
 
 多跳 swap 中，中间 Pair 的输出会直接发送到下一个 Pair，只有最后一跳输出发送给用户。
 
+## TWAP Oracle 示例
+
+`SimpleTwapOracle.sol` 演示如何消费 Pair 的累计价格字段：
+
+1. 构造函数记录初始 `price0CumulativeLast`、`price1CumulativeLast` 和 Pair timestamp。
+2. `update()` 在 `period` 结束后读取当前累计价格。
+3. 用累计价格差值除以时间差，得到 `price0Average` 和 `price1Average`。
+4. `consult(tokenIn, amountIn)` 使用平均价格计算 TWAP 报价。
+
+该合约是教学 demo，不是生产级 oracle。生产环境还需要考虑窗口选择、操纵成本、更新权限、异常价格处理和多数据源保护。
+
 ## 测试策略
 
 测试按模块组织：
@@ -178,18 +190,22 @@ Router 提供更适合用户使用的接口：
 | --- | --- |
 | `Factory.t.sol` | Pair 创建、重复创建、token 排序、fee setter 权限 |
 | `Library.t.sol` | token 排序、quote、swap 数学、path 数量计算、swap 数学 fuzz |
-| `Pair.t.sol` | mint、burn、swap、K revert、skim/sync、protocol fee、flash swap、permit、TWAP 累计价格 |
-| `Router.t.sol` | 加减流动性、滑点、deadline、exact input/output swap、多跳 swap |
+| `Pair.t.sol` | mint、burn、swap、K revert、skim/sync、protocol fee 精确数量、flash swap、permit、TWAP 累计价格 |
+| `Router.t.sol` | 加减流动性、滑点、deadline、exact input/output swap、多跳 swap、Router path fuzz |
 | `RouterETH.t.sol` | `addLiquidityETH`、ETH refund、`removeLiquidityETH`、Router receive 限制 |
+| `SimpleTwapOracle.t.sol` | TWAP oracle 更新、报价、period 限制和非法 token |
 | `PairInvariant.t.sol` | reserve/balance 一致性、只 swap 场景下 K 不下降 |
 | `PairForAndReserves.t.sol` | CREATE2 Pair 地址预测、reserve 顺序映射 |
 
 当前测试既包含确定性单元/集成测试，也包含 Foundry fuzz 和 invariant 测试。后续可以继续补充：
 
-- Router path 的 fuzz test。
-- 面向调用方的 TWAP library 或 TWAP demo。
-- 更细的 protocol fee 数量精确性测试。
+- Router ETH 路径的失败分支。
+- 根据 Slither 结果进行安全和工程细节加固。
 
 ## 排错归档
 
 开发过程中遇到的典型问题已整理在 [`debugging-archive.md`](debugging-archive.md)，包括 TWAP 左移截断、`kLast` getter、flash swap 少还款、ETH/WETH 测试预期、格式检查和 fuzz 输入范围等问题。
+
+## 静态分析
+
+Slither 静态分析结果已整理在 [`slither-report.md`](slither-report.md)，包括 unchecked transfer、重入模式告警、timestamp、zero-check、calls-loop、compiler version、constant/immutable 等 finding 的分类和处理计划。

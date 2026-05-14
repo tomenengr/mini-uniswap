@@ -4,13 +4,14 @@ pragma solidity ^0.8.20;
 import "./UniERC20.sol";
 import "./ERC20.sol";
 import "./Math.sol";
+import "./TransferHelper.sol";
 import "./interfaces/IUniswapV2Callee.sol";
 import "./interfaces/IUniswapV2Factory.sol";
 
 contract Pair is UniERC20 {
     address public token0;
     address public token1;
-    address public factory;
+    address public immutable factory;
     uint256 public constant MINIMUM_LIQUIDITY = 1000;
     // Backwards-compat alias (typo) for any existing references.
     uint256 public constant MINIMUN_LIQUIDITY = MINIMUM_LIQUIDITY;
@@ -53,6 +54,7 @@ contract Pair is UniERC20 {
 
     function initialize(address _token0, address _token1) external {
         require(msg.sender == factory, "not owner");
+        require(_token0 != address(0) && _token1 != address(0), "zero address");
         token0 = _token0;
         token1 = _token1;
     }
@@ -145,8 +147,8 @@ contract Pair is UniERC20 {
 
         _burn(address(this), liquidity);
 
-        ERC20(token0).transfer(to, amount0);
-        ERC20(token1).transfer(to, amount1);
+        TransferHelper.safeTransfer(token0, to, amount0);
+        TransferHelper.safeTransfer(token1, to, amount1);
 
         balance0 = ERC20(token0).balanceOf(address(this));
         balance1 = ERC20(token1).balanceOf(address(this));
@@ -162,8 +164,8 @@ contract Pair is UniERC20 {
         require(amount0Out < _reserve0 && amount1Out < _reserve1, "insufficient liquidity");
         require(to != token0 && to != token1, "invalid to");
 
-        if (amount0Out > 0) ERC20(token0).transfer(to, amount0Out);
-        if (amount1Out > 0) ERC20(token1).transfer(to, amount1Out);
+        if (amount0Out > 0) TransferHelper.safeTransfer(token0, to, amount0Out);
+        if (amount1Out > 0) TransferHelper.safeTransfer(token1, to, amount1Out);
 
         if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
 
@@ -196,7 +198,7 @@ contract Pair is UniERC20 {
         (uint112 _reserve0, uint112 _reserve1,) = getReserves();
         uint256 balance0 = ERC20(token0).balanceOf(address(this));
         uint256 balance1 = ERC20(token1).balanceOf(address(this));
-        if (balance0 > _reserve0) ERC20(token0).transfer(_to, balance0 - _reserve0);
-        if (balance1 > _reserve1) ERC20(token1).transfer(_to, balance1 - _reserve1);
+        if (balance0 > _reserve0) TransferHelper.safeTransfer(token0, _to, balance0 - _reserve0);
+        if (balance1 > _reserve1) TransferHelper.safeTransfer(token1, _to, balance1 - _reserve1);
     }
 }
