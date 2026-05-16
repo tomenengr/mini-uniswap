@@ -1,0 +1,96 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "deployedAt": "2026-05-16",
+  "deployer": "0xabF4020A35EB4269d99AC1AE8bf3956fceaab49A",
+  "sourceCommit": "069b59653f8410e539e7d32ff45a502b5166bfdf",
+  "compiler": {
+    "solc": "0.8.20",
+    "optimizer": true,
+    "optimizerRuns": 200
+  },
+  "contracts": {
+    "Factory": {
+      "address": "0x0194528124b6c17f6210E17Da8ebC39fE42eF20b",
+      "transactionHash": "0x2f943f151823ffefc5f51ab288903994ef798e646e4676a2b13cdf5175563ddc",
+      "etherscan": "https://sepolia.etherscan.io/address/0x0194528124b6c17f6210E17Da8ebC39fE42eF20b"
+    },
+    "DemoWETH": {
+      "address": "0xe687A198739a43FFB5Cf15761Bbb03EDFa5c15CB",
+      "transactionHash": "0x86d367f589be61175ce1d3990ee62b4e74819547d2d87d60d1ca3ab60d3eaf03",
+      "etherscan": "https://sepolia.etherscan.io/address/0xe687A198739a43FFB5Cf15761Bbb03EDFa5c15CB"
+    },
+    "Router": {
+      "address": "0xCd1ee1570826659266F5E1907e1c6A28edbDC245",
+      "transactionHash": "0x7d71503f3784300dcf85edc266943ccfe3729c30908b62f9eb65d27c60ea171f",
+      "etherscan": "https://sepolia.etherscan.io/address/0xCd1ee1570826659266F5E1907e1c6A28edbDC245"
+    },
+    "TokenA": {
+      "address": "0xbBE034a07215bEEb9d430A7d0A769300630EA1D1",
+      "transactionHash": "0x383113fd808ad54a451ff9dc9ecee424de5490ec841f8193d40c4c43af11d456",
+      "name": "Demo Token A",
+      "symbol": "DTA",
+      "etherscan": "https://sepolia.etherscan.io/address/0xbBE034a07215bEEb9d430A7d0A769300630EA1D1"
+    },
+    "TokenB": {
+      "address": "0x952d53e13dd115055b8BeB7EF7a2B70689Ca0622",
+      "transactionHash": "0xd40aa716310e629ca8e42245bbc2c0ae9530cb26dfe570a4a0bb0c5718fc1a68",
+      "name": "Demo Token B",
+      "symbol": "DTB",
+      "etherscan": "https://sepolia.etherscan.io/address/0x952d53e13dd115055b8BeB7EF7a2B70689Ca0622"
+    },
+    "PairTokenATokenB": {
+      "address": "0x2487F862d239b779B06Bedf32F98571B9f63f2e3",
+      "transactionHash": "0xbcd80417fab867946577c9606f569153eddc3a8b09012202a590d1e6fa27e749",
+      "etherscan": "https://sepolia.etherscan.io/address/0x2487F862d239b779B06Bedf32F98571B9f63f2e3"
+    },
+    "SimpleTwapOracle": {
+      "address": "0x3eA380833Cb9dcFb692f2e292847D258699dD5ff",
+      "transactionHash": "0x1ee0db84fc26557b915ec9e782a20e82a376ee498c9c3902191e391e85590ef2",
+      "period": 600,
+      "etherscan": "https://sepolia.etherscan.io/address/0x3eA380833Cb9dcFb692f2e292847D258699dD5ff"
+    }
+  },
+  "demoInteractions": {
+    "seedLiquidity": {
+      "script": "script/SeedDemoLiquidity.s.sol:SeedDemoLiquidity",
+      "amountA": "1000000000000000000000",
+      "amountB": "1000000000000000000000",
+      "approveTokenA": {
+        "transactionHash": "0x6608d4e41093894502a334e5f5f1c7da479fdfc27bf0f78e1cf50f00eb50ac29",
+        "etherscan": "https://sepolia.etherscan.io/tx/0x6608d4e41093894502a334e5f5f1c7da479fdfc27bf0f78e1cf50f00eb50ac29"
+      },
+      "approveTokenB": {
+        "transactionHash": "0x9a11617aeaf8d9f64cc9781bba1732218f890828bb027b9c7e2a1e11c56312b1",
+        "etherscan": "https://sepolia.etherscan.io/tx/0x9a11617aeaf8d9f64cc9781bba1732218f890828bb027b9c7e2a1e11c56312b1"
+      },
+      "addLiquidity": {
+        "transactionHash": "0x194d046e1a2b131a46f927fff254ffe4aa0813406ace3f81d1336c33e23f7042",
+        "etherscan": "https://sepolia.etherscan.io/tx/0x194d046e1a2b131a46f927fff254ffe4aa0813406ace3f81d1336c33e23f7042"
+      },
+      "notes": "The swap transaction in the first SeedDemoLiquidity broadcast ran out of gas; liquidity was seeded successfully and the swap was completed with script/DemoSwap.s.sol."
+    },
+    "swapDtaForDtb": {
+      "script": "script/DemoSwap.s.sol:DemoSwap",
+      "amountIn": "10000000000000000000",
+      "amountOut": "9871580343970612988",
+      "approveTokenA": {
+        "transactionHash": "0x34f99b124dc1bd963277a92eb66d5b2ac6411bb0fe382f3c1bb962d85953a9c1",
+        "etherscan": "https://sepolia.etherscan.io/tx/0x34f99b124dc1bd963277a92eb66d5b2ac6411bb0fe382f3c1bb962d85953a9c1"
+      },
+      "swap": {
+        "transactionHash": "0xbe736552962030ee96f218d8175e4bb29e039fd58a6d9815d44b9ae52e3824bc",
+        "etherscan": "https://sepolia.etherscan.io/tx/0xbe736552962030ee96f218d8175e4bb29e039fd58a6d9815d44b9ae52e3824bc"
+      },
+      "reservesAfter": {
+        "reserve0": "990128419656029387012",
+        "reserve1": "1010000000000000000000",
+        "blockTimestampLast": "1778943636"
+      }
+    }
+  },
+  "notes": [
+    "DemoWETH is a demo wrapped ETH contract deployed by this repository, not canonical WETH.",
+    "The TokenA/TokenB pair is created during deployment but starts with zero reserves until demo liquidity is seeded."
+  ]
+}

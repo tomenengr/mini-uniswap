@@ -2,8 +2,6 @@
 
 Mini Uniswap V2 是一个使用 Solidity + Foundry 实现的简化版 Uniswap V2 AMM 项目，用来学习和验证 Factory、Pair、Router、LP Token、CREATE2 确定性地址、恒定乘积 swap、流动性管理、ETH/WETH 路径、flash swap、protocol fee 和 TWAP oracle 等核心机制。
 
-本项目用于学习和作品集展示，不适合直接用于生产环境或真实资金。
-
 ## 项目目标
 
 - 从零实现 Uniswap V2 的核心合约结构：Factory、Pair、Router、Library。
@@ -169,6 +167,92 @@ make fmt-check
 make coverage
 ```
 
+## Live / Testnet
+
+当前已部署并验证到 Sepolia 测试网。
+
+| 项目 | 值 |
+| --- | --- |
+| Network | Sepolia |
+| Chain ID | `11155111` |
+| Deployer | [`0xabF4020A35EB4269d99AC1AE8bf3956fceaab49A`](https://sepolia.etherscan.io/address/0xabF4020A35EB4269d99AC1AE8bf3956fceaab49A) |
+| Source commit | `069b59653f8410e539e7d32ff45a502b5166bfdf` |
+| Solc / optimizer | `0.8.20`, optimizer enabled, `200` runs |
+| Deployment manifest | [`deployments/sepolia.json`](deployments/sepolia.json) |
+
+| Contract | Address |
+| --- | --- |
+| Factory | [`0x0194528124b6c17f6210E17Da8ebC39fE42eF20b`](https://sepolia.etherscan.io/address/0x0194528124b6c17f6210E17Da8ebC39fE42eF20b) |
+| DemoWETH | [`0xe687A198739a43FFB5Cf15761Bbb03EDFa5c15CB`](https://sepolia.etherscan.io/address/0xe687A198739a43FFB5Cf15761Bbb03EDFa5c15CB) |
+| Router | [`0xCd1ee1570826659266F5E1907e1c6A28edbDC245`](https://sepolia.etherscan.io/address/0xCd1ee1570826659266F5E1907e1c6A28edbDC245) |
+| TokenA (`DTA`) | [`0xbBE034a07215bEEb9d430A7d0A769300630EA1D1`](https://sepolia.etherscan.io/address/0xbBE034a07215bEEb9d430A7d0A769300630EA1D1) |
+| TokenB (`DTB`) | [`0x952d53e13dd115055b8BeB7EF7a2B70689Ca0622`](https://sepolia.etherscan.io/address/0x952d53e13dd115055b8BeB7EF7a2B70689Ca0622) |
+| Pair `DTA/DTB` | [`0x2487F862d239b779B06Bedf32F98571B9f63f2e3`](https://sepolia.etherscan.io/address/0x2487F862d239b779B06Bedf32F98571B9f63f2e3) |
+| SimpleTwapOracle | [`0x3eA380833Cb9dcFb692f2e292847D258699dD5ff`](https://sepolia.etherscan.io/address/0x3eA380833Cb9dcFb692f2e292847D258699dD5ff) |
+
+部署命令示例：
+
+```bash
+forge script script/DeployDemo.s.sol:DeployDemo \
+  --rpc-url $SEPOLIA_RPC_URL \
+  --account test \
+  --sender 0xabF4020A35EB4269d99AC1AE8bf3956fceaab49A \
+  --broadcast \
+  --slow
+```
+
+注入流动性并执行一次 demo swap：
+
+```bash
+forge script script/SeedDemoLiquidity.s.sol:SeedDemoLiquidity \
+  --rpc-url $SEPOLIA_RPC_URL \
+  --account test \
+  --sender 0xabF4020A35EB4269d99AC1AE8bf3956fceaab49A \
+  --broadcast \
+  --slow \
+  --gas-estimate-multiplier 200
+```
+
+默认脚本会添加 `1,000 DTA / 1,000 DTB` 流动性，并执行一次 `10 DTA -> DTB` 的 swap。如果流动性已经添加过，只想单独执行一次 swap，可以运行：
+
+```bash
+DEMO_SWAP_IN=10000000000000000000 \
+forge script script/DemoSwap.s.sol:DemoSwap \
+  --rpc-url $SEPOLIA_RPC_URL \
+  --account test \
+  --sender 0xabF4020A35EB4269d99AC1AE8bf3956fceaab49A \
+  --broadcast \
+  --slow \
+  --gas-estimate-multiplier 200
+```
+
+已完成的 demo 交互：
+
+| Action | Transaction |
+| --- | --- |
+| Add `1,000 DTA / 1,000 DTB` liquidity | [`0x194d046e1a2b131a46f927fff254ffe4aa0813406ace3f81d1336c33e23f7042`](https://sepolia.etherscan.io/tx/0x194d046e1a2b131a46f927fff254ffe4aa0813406ace3f81d1336c33e23f7042) |
+| Swap `10 DTA -> DTB` | [`0xbe736552962030ee96f218d8175e4bb29e039fd58a6d9815d44b9ae52e3824bc`](https://sepolia.etherscan.io/tx/0xbe736552962030ee96f218d8175e4bb29e039fd58a6d9815d44b9ae52e3824bc) |
+
+Swap 后 reserves：
+
+```text
+reserve0: 990128419656029387012
+reserve1: 1010000000000000000000
+blockTimestampLast: 1778943636
+```
+
+读状态示例：
+
+```bash
+cast call 0x0194528124b6c17f6210E17Da8ebC39fE42eF20b "feeToSetter()(address)" --rpc-url $SEPOLIA_RPC_URL
+cast call 0xCd1ee1570826659266F5E1907e1c6A28edbDC245 "factory()(address)" --rpc-url $SEPOLIA_RPC_URL
+cast call 0xCd1ee1570826659266F5E1907e1c6A28edbDC245 "WETH()(address)" --rpc-url $SEPOLIA_RPC_URL
+cast call 0x0194528124b6c17f6210E17Da8ebC39fE42eF20b "getPair(address,address)(address)" 0xbBE034a07215bEEb9d430A7d0A769300630EA1D1 0x952d53e13dd115055b8BeB7EF7a2B70689Ca0622 --rpc-url $SEPOLIA_RPC_URL
+cast call 0x2487F862d239b779B06Bedf32F98571B9f63f2e3 "getReserves()(uint112,uint112,uint32)" --rpc-url $SEPOLIA_RPC_URL
+```
+
+注意：`DemoWETH` 是本项目部署的 demo wrapped ETH 合约，不是 Sepolia 上的 canonical WETH。`SeedDemoLiquidity` 依赖部署账户仍持有足够的 `DTA` 和 `DTB`，如果已经多次运行脚本，需要先检查 token 余额或降低 seed 数量。
+
 ## 文档
 
 - [`docs/design.md`](docs/design.md)：核心架构、AMM 数学、LP mint/burn、swap invariant、protocol fee、Router 流程和测试策略。
@@ -217,7 +301,9 @@ anvil
 ├── Makefile
 ├── README.md
 ├── script
-│   └── DeployDemo.s.sol
+│   ├── DemoSwap.s.sol
+│   ├── DeployDemo.s.sol
+│   └── SeedDemoLiquidity.s.sol
 ├── src
 │   ├── interfaces
 │   │   ├── IUniswapV2Callee.sol
