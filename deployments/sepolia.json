@@ -49,6 +49,15 @@
       "transactionHash": "0x1ee0db84fc26557b915ec9e782a20e82a376ee498c9c3902191e391e85590ef2",
       "period": 600,
       "etherscan": "https://sepolia.etherscan.io/address/0x3eA380833Cb9dcFb692f2e292847D258699dD5ff"
+    },
+    "DemoTokenFaucet": {
+      "address": "0xD0DE35E716681f3977f7B3A7662987ac14c6ec23",
+      "transactionHash": "0x02e5ae41a5368730924c8e015332d4ca372fb01f92a3d8f817cc921a674c7545",
+      "claimAmountA": "100000000000000000000",
+      "claimAmountB": "100000000000000000000",
+      "fundedAmountA": "10000000000000000000000",
+      "fundedAmountB": "10000000000000000000000",
+      "etherscan": "https://sepolia.etherscan.io/address/0xD0DE35E716681f3977f7B3A7662987ac14c6ec23"
     }
   },
   "demoInteractions": {
@@ -91,6 +100,7 @@
   },
   "notes": [
     "DemoWETH is a demo wrapped ETH contract deployed by this repository, not canonical WETH.",
-    "The TokenA/TokenB pair is created during deployment but starts with zero reserves until demo liquidity is seeded."
+    "The TokenA/TokenB pair is created during deployment but starts with zero reserves until demo liquidity is seeded.",
+    "DemoTokenFaucet distributes existing DTA/DTB balances and does not mint new tokens."
   ]
 }

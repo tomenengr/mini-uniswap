@@ -167,6 +167,89 @@ make fmt-check
 make coverage
 ```
 
+## 前端 Demo
+
+仓库包含一个基础可演示前端，目录为 [`frontend`](frontend)。它连接 README 和 [`deployments/sepolia.json`](deployments/sepolia.json) 中的 Sepolia 部署地址，默认演示 `DTA/DTB` pair。
+
+功能覆盖：
+
+- 连接 MetaMask / EIP-1193 钱包并检查 Sepolia 网络。
+- 读取 Factory、Router、Pair、Oracle、DTA、DTB 状态。
+- 展示 DTA/DTB reserves、spot price、LP total supply、用户 token/LP 余额和 allowance。
+- 支持通过 DemoTokenFaucet 领取测试 DTA/DTB。
+- 支持 `approve`、`swapExactTokensForTokens`、`addLiquidity`、`removeLiquidity` 和 `SimpleTwapOracle.update()`。
+- 钱包余额不足时会禁用对应交易按钮并提示原因。
+
+启动方式：
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+可选配置：
+
+```bash
+cp .env.example .env
+# 然后设置 VITE_SEPOLIA_RPC_URL
+```
+
+如果没有配置 `VITE_SEPOLIA_RPC_URL`，前端仍可在连接钱包后通过钱包 provider 读取和发交易。普通钱包可以先通过页面里的 faucet 领取 `100 DTA + 100 DTB`，然后执行 swap 或添加流动性。
+
+前端验证：
+
+```bash
+cd frontend
+npm run typecheck
+npm test
+npm run build
+```
+
+### Demo Token Faucet
+
+现有 Sepolia `DTA` / `DTB` 没有公开 mint。为了让普通钱包也能交互，已部署 [`DemoTokenFaucet`](src/DemoTokenFaucet.sol)，并由 deployer 注入了 `10,000 DTA + 10,000 DTB`。
+
+| 项目 | 值 |
+| --- | --- |
+| DemoTokenFaucet | [`0xD0DE35E716681f3977f7B3A7662987ac14c6ec23`](https://sepolia.etherscan.io/address/0xD0DE35E716681f3977f7B3A7662987ac14c6ec23) |
+| Claim amount | `100 DTA + 100 DTB` |
+| Deploy tx | [`0x02e5ae41a5368730924c8e015332d4ca372fb01f92a3d8f817cc921a674c7545`](https://sepolia.etherscan.io/tx/0x02e5ae41a5368730924c8e015332d4ca372fb01f92a3d8f817cc921a674c7545) |
+
+部署 faucet：
+
+```bash
+forge script script/DeployDemoTokenFaucet.s.sol:DeployDemoTokenFaucet \
+  --rpc-url $SEPOLIA_RPC_URL \
+  --account test \
+  --sender 0xabF4020A35EB4269d99AC1AE8bf3956fceaab49A \
+  --broadcast \
+  --slow
+```
+
+默认每个地址可领取一次 `100 DTA + 100 DTB`。可以用环境变量调整：
+
+```bash
+FAUCET_AMOUNT_A=100000000000000000000 \
+FAUCET_AMOUNT_B=100000000000000000000 \
+forge script script/DeployDemoTokenFaucet.s.sol:DeployDemoTokenFaucet \
+  --rpc-url $SEPOLIA_RPC_URL \
+  --account test \
+  --sender 0xabF4020A35EB4269d99AC1AE8bf3956fceaab49A \
+  --broadcast \
+  --slow
+```
+
+部署后把 token 转入 faucet：
+
+```bash
+FAUCET=<deployed_faucet_address>
+cast send 0xbBE034a07215bEEb9d430A7d0A769300630EA1D1 "transfer(address,uint256)(bool)" $FAUCET 10000000000000000000000 \
+  --account test --from 0xabF4020A35EB4269d99AC1AE8bf3956fceaab49A --rpc-url $SEPOLIA_RPC_URL
+cast send 0x952d53e13dd115055b8BeB7EF7a2B70689Ca0622 "transfer(address,uint256)(bool)" $FAUCET 10000000000000000000000 \
+  --account test --from 0xabF4020A35EB4269d99AC1AE8bf3956fceaab49A --rpc-url $SEPOLIA_RPC_URL
+```
+
 ## Live / Testnet
 
 当前已部署并验证到 Sepolia 测试网。
@@ -189,6 +272,7 @@ make coverage
 | TokenB (`DTB`) | [`0x952d53e13dd115055b8BeB7EF7a2B70689Ca0622`](https://sepolia.etherscan.io/address/0x952d53e13dd115055b8BeB7EF7a2B70689Ca0622) |
 | Pair `DTA/DTB` | [`0x2487F862d239b779B06Bedf32F98571B9f63f2e3`](https://sepolia.etherscan.io/address/0x2487F862d239b779B06Bedf32F98571B9f63f2e3) |
 | SimpleTwapOracle | [`0x3eA380833Cb9dcFb692f2e292847D258699dD5ff`](https://sepolia.etherscan.io/address/0x3eA380833Cb9dcFb692f2e292847D258699dD5ff) |
+| DemoTokenFaucet | [`0xD0DE35E716681f3977f7B3A7662987ac14c6ec23`](https://sepolia.etherscan.io/address/0xD0DE35E716681f3977f7B3A7662987ac14c6ec23) |
 
 部署命令示例：
 
