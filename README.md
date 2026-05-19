@@ -29,14 +29,27 @@ Mini Uniswap V2 是一个使用 Solidity + Foundry 实现的简化版 Uniswap V2
 
 ```mermaid
 flowchart LR
-    User[User / Wallet] --> Router[Router]
+    User[User / Wallet] --> Frontend[Frontend Demo]
+    Frontend --> Router[Router]
+    Frontend --> Faucet[DemoTokenFaucet]
+    Frontend --> Oracle[SimpleTwapOracle]
+
+    Router --> Library[Library]
     Router --> Factory[Factory]
     Router --> Pair[Pair]
+    Router --> WETH[DemoWETH]
+
     Factory --> Pair
-    Pair --> TokenA[ERC20 Token A]
-    Pair --> TokenB[ERC20 Token B / WETH]
-    Oracle[SimpleTwapOracle] --> Pair
+    Library -. predicts / reads .-> Pair
+    Pair <--> TokenA[ERC20 Token A]
+    Pair <--> TokenB[ERC20 Token B]
+    Pair <--> WETH
+    Oracle --> Pair
+    Faucet --> TokenA
+    Faucet --> TokenB
 ```
+
+核心交易路径是 `User -> Frontend -> Router -> Pair`。`Factory` 负责创建 Pair，`Library` 负责地址预测和报价计算，`SimpleTwapOracle` 只读取 Pair 的累计价格；`DemoTokenFaucet` 和前端属于 Sepolia 演示层。
 
 ## 快速开始
 
@@ -226,4 +239,3 @@ forge script script/DeployDemoTokenFaucet.s.sol:DeployDemoTokenFaucet \
 - 不支持 fee-on-transfer、rebasing、pausable、blacklist 等非标准 token。
 - 访问控制保持简化，没有 timelock、multisig 或治理延迟。
 - Slither 已做静态分析和分类记录，但项目没有经过正式安全审计，不能用于真实资金环境。
-
